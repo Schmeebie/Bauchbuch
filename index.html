@@ -24,7 +24,7 @@
   --bg:#F4F3F7; --surface:#FFFFFF; --sunk:#EAE8F0; --ink:#1C1923; --muted:#625D75; --line:#DCD9E5;
   --accent:#3D3796; --accent-soft:#E4E2F6; --on-accent:#FFFFFF;
   --sym1:#B07106; --sym2:#B23A57; --sym3:#6A55CC; --sym4:#1F7466; --sym5:#4F6C8C; --sym6:#9A4FA8;
-  --cry:#2F6FB5; --danger:#B3261E;
+  --cry:#2F6FB5; --stress:#B4532A; --danger:#B3261E;
   --toast-bg:#1C1923; --toast-fg:#F4F3F7; --toast-act:#C9C4FF;
   --shadow:0 1px 2px rgba(28,25,35,.08), 0 4px 14px rgba(28,25,35,.06);
   --f-display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
@@ -36,7 +36,7 @@
     --bg:#141219; --surface:#1E1B26; --sunk:#282432; --ink:#EDEAF4; --muted:#A49FB5; --line:#332E3F;
     --accent:#A8A1FF; --accent-soft:#2B2747; --on-accent:#16131F;
     --sym1:#E6A93A; --sym2:#EC7F98; --sym3:#A897FF; --sym4:#5FC2AF; --sym5:#93AFCF; --sym6:#D08DDC;
-    --cry:#78AEEB; --danger:#F2867E;
+    --cry:#78AEEB; --stress:#F0A070; --danger:#F2867E;
     --toast-bg:#EDEAF4; --toast-fg:#141219; --toast-act:#3D3796;
     --shadow:0 1px 2px rgba(0,0,0,.4);
     color-scheme:dark;
@@ -46,7 +46,7 @@
   --bg:#141219; --surface:#1E1B26; --sunk:#282432; --ink:#EDEAF4; --muted:#A49FB5; --line:#332E3F;
   --accent:#A8A1FF; --accent-soft:#2B2747; --on-accent:#16131F;
   --sym1:#E6A93A; --sym2:#EC7F98; --sym3:#A897FF; --sym4:#5FC2AF; --sym5:#93AFCF; --sym6:#D08DDC;
-  --cry:#78AEEB; --danger:#F2867E;
+  --cry:#78AEEB; --stress:#F0A070; --danger:#F2867E;
   --toast-bg:#EDEAF4; --toast-fg:#141219; --toast-act:#3D3796;
   --shadow:0 1px 2px rgba(0,0,0,.4);
   color-scheme:dark;
@@ -113,6 +113,12 @@ h2{margin:0}
 .seg button{min-height:46px;border-radius:11px;font-weight:700;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
 .seg button.yes[aria-pressed="true"]{background:var(--cry);color:var(--on-accent)}
+.seg.seg5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.seg button.stress{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:58px;padding:4px 2px}
+.seg button.stress b{font-family:var(--f-display);font-size:1.3rem;line-height:1;font-variant-numeric:tabular-nums}
+.seg button.stress small{font-size:.72rem;font-weight:700}
+.seg button.stress[aria-pressed="true"]{background:var(--stress);color:var(--on-accent)}
+.cell.lo{color:var(--ink)}
 
 /* Timeline */
 .tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
@@ -247,6 +253,8 @@ const DEFAULT_SYMPTOMS=[
   {id:'durchfall',name:'Durchfall',color:4}
 ];
 const SEV=[{v:1,l:'Leicht'},{v:2,l:'Mittel'},{v:3,l:'Stark'}];
+const STRESS=['Kein','Leicht','Mittel','Stark','Extrem'];
+const STRESS_P=[14,35,55,78,100];
 const S={view:'tag',day:'',entries:[],days:new Map(),symptoms:[],persistent:false,storageOk:true,addingSym:false};
 const $=s=>document.querySelector(s);
 const main=$('#main'),panel=$('#panel'),sheet=$('#sheet');
@@ -361,10 +369,11 @@ async function addMealNoPhoto(){
   const e={id:uid(),type:'food',day:S.day,ts:defaultTs(),thumb:null,hasPhoto:false,note:''};
   await saveEntry(e);openEditor(e.id);
 }
-async function setCry(v){
-  const cur=S.days.get(S.day);
-  if(cur&&cur.cried===v){S.days.delete(S.day);render();await safe(store.del('days',S.day))}
-  else{const d={day:S.day,cried:v};S.days.set(S.day,d);render();await safe(store.put('days',d))}
+async function setDay(field,v){
+  const cur=Object.assign({day:S.day},S.days.get(S.day)||{});
+  if(cur[field]===v)delete cur[field];else cur[field]=v;
+  if(cur.cried==null&&cur.stress==null){S.days.delete(S.day);render();await safe(store.del('days',S.day))}
+  else{S.days.set(S.day,cur);render();await safe(store.put('days',cur))}
 }
 const saveSymptoms=()=>safe(store.put('meta',{k:'symptoms',list:S.symptoms}));
 async function addSymptom(name){
@@ -411,7 +420,9 @@ function viewTag(){
   const isToday=S.day===todayKey();
   const list=S.entries.filter(e=>e.day===S.day).sort((a,b)=>a.ts-b.ts);
   const counts={};list.forEach(e=>{if(e.type==='symptom')counts[e.sym]=(counts[e.sym]||0)+1});
-  const cry=S.days.get(S.day);const cried=cry?cry.cried:null;
+  const dd=S.days.get(S.day)||{};
+  const cried=dd.cried==null?null:dd.cried;
+  const stress=dd.stress==null?null:dd.stress;
   const [t,sub]=dayTitle(S.day);
   const visible=S.symptoms.filter(s=>!s.hidden);
   return `
@@ -459,6 +470,13 @@ function viewTag(){
     </div>
   </section>
 
+  <section aria-labelledby="h-stress">
+    <div class="sec-head"><h2 class="label" id="h-stress">${isToday?'Stresslevel heute':'Stresslevel an diesem Tag'}</h2><span class="hint">0 = kein Stress, 4 = extrem</span></div>
+    <div class="seg seg5" role="group" aria-labelledby="h-stress">
+      ${STRESS.map((l,i)=>`<button class="stress" data-act="stress" data-v="${i}" aria-pressed="${stress===i}" aria-label="${i}, ${l}"><b>${i}</b><small>${l}</small></button>`).join('')}
+    </div>
+  </section>
+
   <section aria-labelledby="h-tl">
     <h2 class="label" id="h-tl">Tagesverlauf</h2>
     ${list.length?`<ol class="tl">${list.map(itemHTML).join('')}</ol>`:
@@ -496,13 +514,18 @@ function viewVerlauf(){
     return `<span class="cell" style="--c:var(${color});--p:${p}%">${n>1?n:''}</span>`;
   };
   const symDays=days.filter(d=>cnt(d,e=>e.type==='symptom')>0).length;
-  const cryDays=days.filter(d=>{const c=S.days.get(d);return c&&c.cried}).length;
+  const cryDays=days.filter(d=>{const c=S.days.get(d);return c&&c.cried===true}).length;
   const meals=days.reduce((a,d)=>a+cnt(d,e=>e.type==='food'),0);
+  const stressVals=days.map(d=>(S.days.get(d)||{}).stress).filter(v=>v!=null);
+  const stressAvg=stressVals.length?(stressVals.reduce((a,b)=>a+b,0)/stressVals.length).toFixed(1).replace('.',','):null;
   const head=days.map(d=>{const dt=parseDay(d);return `<th scope="col" class="${d===end?'is-today':''}">${esc(fmtWd.format(dt).replace('.',''))}<span class="dn">${dt.getDate()}</span></th>`}).join('');
   const body=rows.map(s=>`<tr><th scope="row">${esc(s.name)}</th>${days.map(d=>{const n=cnt(d,e=>e.type==='symptom'&&e.sym===s.id);return `<td title="${esc(s.name)}, ${fmtDE(d)}: ${n}×">${cell(n,'--sym'+s.color)}</td>`}).join('')}</tr>`).join('')
     +`<tr><th scope="row">Geweint</th>${days.map(d=>{const c=S.days.get(d);
-        if(!c)return '<td><span class="cell zero"></span></td>';
+        if(!c||c.cried==null)return '<td><span class="cell zero"></span></td>';
         return c.cried?'<td title="Geweint"><span class="cell" style="--c:var(--cry);--p:100%"></span></td>':'<td title="Nicht geweint"><span class="cell no"></span></td>'}).join('')}</tr>`
+    +`<tr><th scope="row">Stress</th>${days.map(d=>{const v=(S.days.get(d)||{}).stress;
+        if(v==null)return '<td><span class="cell zero"></span></td>';
+        return `<td title="Stress ${v}, ${STRESS[v]}"><span class="cell${v<=1?' lo':''}" style="--c:var(--stress);--p:${STRESS_P[v]}%">${v}</span></td>`}).join('')}</tr>`
     +`<tr><th scope="row">Mahlzeiten</th>${days.map(d=>`<td>${cell(cnt(d,e=>e.type==='food'),'--muted')}</td>`).join('')}</tr>`;
 
   const recent=[...new Set([...Object.keys(by),...S.days.keys()])].filter(d=>d<=end&&d>=addDays(end,-59)).sort().reverse();
@@ -510,7 +533,9 @@ function viewVerlauf(){
     const es=(by[d]||[]).slice().sort((a,b)=>a.ts-b.ts);
     const c={};es.forEach(e=>{if(e.type==='symptom')c[e.sym]=(c[e.sym]||0)+1});
     const chips=Object.keys(c).map(id=>{const s=symOf(es.find(e=>e.sym===id));return `<span class="chip"><span class="dot" style="--c:var(--sym${s.color})"></span>${esc(s.name)}${c[id]>1?' '+c[id]+'×':''}</span>`});
-    const cr=S.days.get(d);if(cr&&cr.cried)chips.push('<span class="chip"><span class="dot" style="--c:var(--cry)"></span>Geweint</span>');
+    const cr=S.days.get(d)||{};
+    if(cr.cried===true)chips.push('<span class="chip"><span class="dot" style="--c:var(--cry)"></span>Geweint</span>');
+    if(cr.stress!=null)chips.push(`<span class="chip"><span class="dot" style="--c:var(--stress)"></span>Stress ${cr.stress} · ${STRESS[cr.stress]}</span>`);
     const th=es.filter(e=>e.thumb).slice(0,3).map(e=>`<img src="${e.thumb}" alt="">`).join('');
     const [t,sub]=dayTitle(d);
     const meals=es.filter(e=>e.type==='food').length;
@@ -525,7 +550,7 @@ function viewVerlauf(){
   <header><h1>Verlauf</h1><p class="sub">Die letzten 14 Tage auf einen Blick</p></header>
   <section aria-labelledby="h-sum">
     <h2 class="vh" id="h-sum">Zusammenfassung</h2>
-    <p class="summary">An <b>${symDays}</b> von 14 Tagen hattest du Symptome, an <b>${cryDays}</b> Tagen hast du geweint. <b>${meals}</b> Mahlzeiten sind eingetragen.</p>
+    <p class="summary">An <b>${symDays}</b> von 14 Tagen hattest du Symptome, an <b>${cryDays}</b> Tagen hast du geweint. <b>${meals}</b> Mahlzeiten sind eingetragen.${stressAvg?` Dein Stress lag im Schnitt bei <b>${stressAvg}</b> von 4.`:''}</p>
   </section>
   <section aria-labelledby="h-mx">
     <h2 class="label" id="h-mx">Symptome pro Tag</h2>
@@ -698,7 +723,8 @@ function exportCSV(){
   const all=[...new Set([...sorted.map(e=>e.day),...S.days.keys()])].sort();
   all.forEach(d=>{
     const c=S.days.get(d);
-    if(c)rows.push([fmtDE(d),'','Weinen',c.cried?'Geweint':'Nicht geweint','','']);
+    if(c&&c.cried!=null)rows.push([fmtDE(d),'','Weinen',c.cried?'Geweint':'Nicht geweint','','']);
+    if(c&&c.stress!=null)rows.push([fmtDE(d),'','Stress',c.stress+' von 4 ('+STRESS[c.stress]+')','','']);
     sorted.filter(e=>e.day===d).forEach(e=>rows.push([fmtDE(d),hhmm(e.ts),e.type==='food'?'Essen':'Symptom',
       e.type==='food'?(e.hasPhoto?'Mahlzeit (mit Foto)':'Mahlzeit'):symOf(e).name,e.sev?SEV[e.sev-1].l:'',e.note||'']));
   });
@@ -714,7 +740,8 @@ main.addEventListener('click',ev=>{
   else if(a==='next'){if(S.day<todayKey()){S.day=addDays(S.day,1);render()}}
   else if(a==='today'){S.day=todayKey();render()}
   else if(a==='sym')logSymptom(b.dataset.id,b);
-  else if(a==='cry')setCry(b.dataset.v==='yes');
+  else if(a==='cry')setDay('cried',b.dataset.v==='yes');
+  else if(a==='stress')setDay('stress',+b.dataset.v);
   else if(a==='edit')openEditor(b.dataset.id);
   else if(a==='nophoto')addMealNoPhoto();
   else if(a==='addsym-open'){S.addingSym=true;render()}
