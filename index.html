@@ -24,7 +24,7 @@
   --bg:#F4F3F7; --surface:#FFFFFF; --sunk:#EAE8F0; --ink:#1C1923; --muted:#625D75; --line:#DCD9E5;
   --accent:#3D3796; --accent-soft:#E4E2F6; --on-accent:#FFFFFF;
   --sym1:#B07106; --sym2:#B23A57; --sym3:#6A55CC; --sym4:#1F7466; --sym5:#4F6C8C; --sym6:#9A4FA8;
-  --cry:#2F6FB5; --stress:#B4532A; --danger:#B3261E;
+  --cry:#2F6FB5; --stress:#B4532A; --period:#C8303C; --danger:#B3261E;
   --toast-bg:#1C1923; --toast-fg:#F4F3F7; --toast-act:#C9C4FF;
   --shadow:0 1px 2px rgba(28,25,35,.08), 0 4px 14px rgba(28,25,35,.06);
   --f-display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
@@ -36,7 +36,7 @@
     --bg:#141219; --surface:#1E1B26; --sunk:#282432; --ink:#EDEAF4; --muted:#A49FB5; --line:#332E3F;
     --accent:#A8A1FF; --accent-soft:#2B2747; --on-accent:#16131F;
     --sym1:#E6A93A; --sym2:#EC7F98; --sym3:#A897FF; --sym4:#5FC2AF; --sym5:#93AFCF; --sym6:#D08DDC;
-    --cry:#78AEEB; --stress:#F0A070; --danger:#F2867E;
+    --cry:#78AEEB; --stress:#F0A070; --period:#FF8F8A; --danger:#F2867E;
     --toast-bg:#EDEAF4; --toast-fg:#141219; --toast-act:#3D3796;
     --shadow:0 1px 2px rgba(0,0,0,.4);
     color-scheme:dark;
@@ -46,12 +46,13 @@
   --bg:#141219; --surface:#1E1B26; --sunk:#282432; --ink:#EDEAF4; --muted:#A49FB5; --line:#332E3F;
   --accent:#A8A1FF; --accent-soft:#2B2747; --on-accent:#16131F;
   --sym1:#E6A93A; --sym2:#EC7F98; --sym3:#A897FF; --sym4:#5FC2AF; --sym5:#93AFCF; --sym6:#D08DDC;
-  --cry:#78AEEB; --stress:#F0A070; --danger:#F2867E;
+  --cry:#78AEEB; --stress:#F0A070; --period:#FF8F8A; --danger:#F2867E;
   --toast-bg:#EDEAF4; --toast-fg:#141219; --toast-act:#3D3796;
   --shadow:0 1px 2px rgba(0,0,0,.4);
   color-scheme:dark;
 }
 
+*,*::before,*::after{box-sizing:border-box}
 html,body{min-height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
 button,input,textarea,select{font:inherit;color:inherit}
@@ -135,6 +136,19 @@ h3{margin:0}
 .seg button.stress small{font-size:.72rem;font-weight:700}
 .seg button.stress[aria-pressed="true"]{background:var(--stress);color:var(--on-accent)}
 .cell.lo{color:var(--ink)}
+.seg.seg4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.seg button.two{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:58px;padding:4px 3px;line-height:1.12;text-align:center}
+.seg button.two small{font-size:.7rem;font-weight:700;opacity:.85}
+.seg button.bleed[aria-pressed="true"]{background:var(--period);color:var(--on-accent)}
+.cyc-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.cyc{width:100%;border-collapse:collapse;font-size:.9rem}
+.cyc th,.cyc td{padding:8px 4px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+.cyc thead th{font-size:.78rem;color:var(--muted);vertical-align:bottom;line-height:1.2}
+.cyc thead th small{display:block;font-weight:400;font-variant-numeric:tabular-nums}
+.cyc tbody th{font-weight:700;min-width:104px;line-height:1.2}
+.cyc tbody th .dot{margin-right:6px}
+.pc{display:block;min-width:56px;padding:3px 6px;border-radius:6px;font-variant-numeric:tabular-nums;font-weight:700;background:linear-gradient(90deg,color-mix(in srgb,var(--c) 32%,transparent) var(--v),var(--sunk) var(--v))}
+.pc.na{background:none;color:var(--muted);font-weight:400}
 
 /* Timeline */
 .tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
@@ -274,6 +288,10 @@ const NEW_PAIN=DEFAULT_SYMPTOMS.filter(s=>s.id.startsWith('bauchschmerzen-'));
 const SEV=[{v:1,l:'Leicht'},{v:2,l:'Mittel'},{v:3,l:'Stark'}];
 const STRESS=['Kein','Leicht','Mittel','Stark','Extrem'];
 const STRESS_P=[14,35,55,78,100];
+const FLOW_ORDER=['none','spot','light','heavy'];
+const FLOW={none:{l:'Keine',s:''},spot:{l:'Schmier\u00ADblutung',s:''},light:{l:'Leicht',s:'beginnt / endet'},heavy:{l:'Stark',s:'voll da'}};
+const FLOW_TXT={none:'Keine Periode',spot:'Schmierblutung',light:'Periode leicht',heavy:'Periode stark'};
+const FLOW_P={spot:30,light:62,heavy:100};
 const S={view:'tag',day:'',entries:[],days:new Map(),symptoms:[],persistent:false,storageOk:true,addingSym:false};
 const $=s=>document.querySelector(s);
 const main=$('#main'),panel=$('#panel'),sheet=$('#sheet');
@@ -292,6 +310,16 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const symOf=e=>S.symptoms.find(s=>s.id===e.sym)||{name:e.name,color:e.color||5};
 const inFrame=(()=>{try{return window.self!==window.top}catch(e){return true}})();
 const pk=e=>e.photoKey||e.id;
+const bleeding=d=>{const f=(S.days.get(d)||{}).flow;return f==='light'||f==='heavy'};
+function periodStarts(){
+  // First bleeding day with no bleeding in the 7 days before it
+  return [...S.days.keys()].filter(bleeding).sort().filter(d=>{for(let i=1;i<=7;i++)if(bleeding(addDays(d,-i)))return false;return true});
+}
+const daysBetween=(a,b)=>Math.round((parseDay(b)-parseDay(a))/864e5);
+function cycleDay(k){
+  const st=periodStarts().filter(x=>x<=k);if(!st.length)return null;
+  const n=daysBetween(st[st.length-1],k)+1;return n<=60?n:null;
+}
 const fmtDM=k=>{const p=k.split('-');return (+p[2])+'.'+(+p[1])+'.'};
 const reusable=e=>e.type==='food'&&(e.hasPhoto||!!(e.note&&e.note.trim()));
 const mealKey=e=>(e.hasPhoto?pk(e):'')+'|'+(e.note||'').trim().toLowerCase();
@@ -410,7 +438,7 @@ async function addMealNoPhoto(){
 async function setDay(field,v){
   const cur=Object.assign({day:S.day},S.days.get(S.day)||{});
   if(cur[field]===v)delete cur[field];else cur[field]=v;
-  if(cur.cried==null&&cur.stress==null){S.days.delete(S.day);render();await safe(store.del('days',S.day))}
+  if(!Object.keys(cur).some(k=>k!=='day'&&cur[k]!=null)){S.days.delete(S.day);render();await safe(store.del('days',S.day))}
   else{S.days.set(S.day,cur);render();await safe(store.put('days',cur))}
 }
 const saveSymptoms=()=>safe(store.put('meta',{k:'symptoms',list:S.symptoms}));
@@ -463,11 +491,13 @@ function viewTag(){
   const dd=S.days.get(S.day)||{};
   const cried=dd.cried==null?null:dd.cried;
   const stress=dd.stress==null?null:dd.stress;
+  const flow=dd.flow||null;
+  const cd=cycleDay(S.day);
   const [t,sub]=dayTitle(S.day);
   const visible=S.symptoms.filter(s=>!s.hidden);
   return `
   <header class="dayhead">
-    <div><h1>${esc(t)}</h1><p class="sub">${esc(sub)}</p></div>
+    <div><h1>${esc(t)}</h1><p class="sub">${esc(sub)}${cd?' · Zyklustag '+cd:''}</p></div>
     <div class="daynav">
       <button class="icon-btn" data-act="prev" aria-label="Vorheriger Tag">${I.left}</button>
       ${isToday?'':'<button class="pill" data-act="today">Heute</button>'}
@@ -492,7 +522,7 @@ function viewTag(){
   <section aria-labelledby="h-sym">
     <div class="sec-head"><h2 class="label" id="h-sym">Symptome</h2><span class="hint">${isToday?'Antippen trägt es mit jetziger Uhrzeit ein':'Antippen, dann Uhrzeit wählen'}</span></div>
     <div class="symgrid">
-      ${visible.map(s=>`<button class="sym" data-act="sym" data-id="${esc(s.id)}" style="--c:var(--sym${s.color})"><span class="dot"></span><span>${esc(s.name)}</span>${counts[s.id]?`<span class="count" aria-label="${counts[s.id]} Mal">${counts[s.id]}×</span>`:'<span></span>'}</button>`).join('')}
+      ${visible.map(s=>`<button class="sym" data-act="sym" data-id="${esc(s.id)}" style="--c:var(--sym${s.color})"><span class="dot"></span><span>${esc(s.name).replace(/Bauchschmerzen/g,'Bauch&shy;schmerzen')}</span>${counts[s.id]?`<span class="count" aria-label="${counts[s.id]} Mal">${counts[s.id]}×</span>`:'<span></span>'}</button>`).join('')}
       ${S.addingSym?'':`<button class="sym sym-add${visible.length%2?' half':''}" data-act="addsym-open">+ Eigenes Symptom</button>`}
     </div>
     ${S.addingSym?`<form class="addsym" id="addsym-form">
@@ -515,6 +545,13 @@ function viewTag(){
     <div class="sec-head"><h2 class="label" id="h-stress">${isToday?'Stresslevel heute':'Stresslevel an diesem Tag'}</h2><span class="hint">0 = kein Stress, 4 = extrem</span></div>
     <div class="seg seg5" role="group" aria-labelledby="h-stress">
       ${STRESS.map((l,i)=>`<button class="stress" data-act="stress" data-v="${i}" aria-pressed="${stress===i}" aria-label="${i}, ${l}"><b>${i}</b><small>${l}</small></button>`).join('')}
+    </div>
+  </section>
+
+  <section aria-labelledby="h-flow">
+    <div class="sec-head"><h2 class="label" id="h-flow">Periode</h2><span class="hint">${cd?'Zyklustag '+cd:'Erster Tag mit Blutung = Zyklustag 1'}</span></div>
+    <div class="seg seg4" role="group" aria-labelledby="h-flow">
+      ${FLOW_ORDER.map(k=>`<button class="two${k==='none'?'':' bleed'}" data-act="flow" data-v="${k}" aria-pressed="${flow===k}"><span>${FLOW[k].l}</span>${FLOW[k].s?`<small>${FLOW[k].s}</small>`:''}</button>`).join('')}
     </div>
   </section>
 
@@ -589,6 +626,9 @@ function viewVerlauf(){
     +`<tr><th scope="row">Stress</th>${days.map(d=>{const v=(S.days.get(d)||{}).stress;
         if(v==null)return '<td><span class="cell zero"></span></td>';
         return `<td title="Stress ${v}, ${STRESS[v]}"><span class="cell${v<=1?' lo':''}" style="--c:var(--stress);--p:${STRESS_P[v]}%">${v}</span></td>`}).join('')}</tr>`
+    +`<tr><th scope="row">Periode</th>${days.map(d=>{const f=(S.days.get(d)||{}).flow;
+        if(!f||f==='none')return `<td${f?' title="Keine Periode"':''}><span class="cell zero"></span></td>`;
+        return `<td title="${FLOW_TXT[f]}"><span class="cell" style="--c:var(--period);--p:${FLOW_P[f]}%"></span></td>`}).join('')}</tr>`
     +`<tr><th scope="row">Mahlzeiten</th>${days.map(d=>`<td>${cell(cnt(d,e=>e.type==='food'),'--muted')}</td>`).join('')}</tr>`;
 
   const recent=[...new Set([...Object.keys(by),...S.days.keys()])].filter(d=>d<=end&&d>=addDays(end,-59)).sort().reverse();
@@ -598,6 +638,7 @@ function viewVerlauf(){
     const chips=Object.keys(c).map(id=>{const s=symOf(es.find(e=>e.sym===id));return `<span class="chip"><span class="dot" style="--c:var(--sym${s.color})"></span>${esc(s.name)}${c[id]>1?' '+c[id]+'×':''}</span>`});
     const cr=S.days.get(d)||{};
     if(cr.cried===true)chips.push('<span class="chip"><span class="dot" style="--c:var(--cry)"></span>Geweint</span>');
+    if(cr.flow&&cr.flow!=='none')chips.push(`<span class="chip"><span class="dot" style="--c:var(--period)"></span>${FLOW_TXT[cr.flow]}</span>`);
     if(cr.stress!=null)chips.push(`<span class="chip"><span class="dot" style="--c:var(--stress)"></span>Stress ${cr.stress} · ${STRESS[cr.stress]}</span>`);
     const th=es.filter(e=>e.thumb).slice(0,3).map(e=>`<img src="${e.thumb}" alt="">`).join('');
     const [t,sub]=dayTitle(d);
@@ -620,9 +661,41 @@ function viewVerlauf(){
     <div class="matrix-wrap"><table class="matrix"><thead><tr><th scope="col"><span class="vh">Eintrag</span></th>${head}</tr></thead><tbody>${body}</tbody></table></div>
     <div class="legend"><span><span class="cell" style="--c:var(--sym3);--p:65%"></span>einmal</span><span><span class="cell" style="--c:var(--sym3);--p:100%"></span>öfter (Zahl = Anzahl)</span><span><span class="cell no"></span>nicht geweint</span></div>
   </section>
+  ${cycleHTML()}
   <section aria-labelledby="h-days">
     <h2 class="label" id="h-days">Einzelne Tage</h2>
     ${dayRows?`<ul class="daylist">${dayRows}</ul>`:'<p class="empty">Sobald du etwas einträgst, erscheinen die Tage hier.</p>'}
+  </section>`;
+}
+function cycleHTML(){
+  const starts=periodStarts();
+  const headH='<h2 class="label" id="h-cyc">Bauch und Zyklus</h2>';
+  if(!starts.length)return `<section aria-labelledby="h-cyc">${headH}<p class="empty">Sobald du eine Periode einträgst, siehst du hier, ob deine Beschwerden mit dem Zyklus zusammenhängen.</p></section>`;
+  const end=todayKey(),from=addDays(end,-179);
+  const symBy={};
+  S.entries.forEach(e=>{if(e.type==='symptom'&&e.day>=from&&e.day<=end)(symBy[e.day]=symBy[e.day]||new Set()).add(e.sym)});
+  const tracked=new Set([...S.entries.map(e=>e.day),...S.days.keys()].filter(d=>d>=from&&d<=end));
+  const pre=new Set();starts.forEach(st=>{for(let i=1;i<=5;i++)pre.add(addDays(st,-i))});
+  const G={periode:[],vorher:[],sonst:[]};
+  tracked.forEach(d=>{if(bleeding(d))G.periode.push(d);else if(pre.has(d))G.vorher.push(d);else G.sonst.push(d)});
+  const order=['periode','vorher','sonst'];
+  const pct=(g,f)=>G[g].length?Math.round(G[g].filter(f).length/G[g].length*100):null;
+  const ids=new Set();Object.values(symBy).forEach(x=>x.forEach(i=>ids.add(i)));
+  const syms=[...S.symptoms.filter(x=>ids.has(x.id))];
+  ids.forEach(id=>{if(!syms.some(x=>x.id===id)){const e=S.entries.find(y=>y.sym===id);syms.push({id,name:e.name,color:e.color||5})}});
+  const cellH=(v,c)=>v==null?'<td><span class="pc na">–</span></td>':`<td><span class="pc" style="--c:var(${c});--v:${v}%">${v} %</span></td>`;
+  const rows=[`<tr><th scope="row">Irgendein Symptom</th>${order.map(g=>cellH(pct(g,d=>!!symBy[d]),'--accent')).join('')}</tr>`]
+    .concat(syms.map(x=>`<tr><th scope="row"><span class="dot" style="--c:var(--sym${x.color})"></span>${esc(x.name)}</th>${order.map(g=>cellH(pct(g,d=>symBy[d]&&symBy[d].has(x.id)),'--sym'+x.color)).join('')}</tr>`)).join('');
+  const lab={periode:'Während der Periode',vorher:'5 Tage davor',sonst:'Übrige Tage'};
+  const last=starts[starts.length-1];
+  const lens=starts.slice(1).map((x,i)=>daysBetween(starts[i],x)).filter(n=>n>=15&&n<=60);
+  const few=order.some(g=>G[g].length<10);
+  return `<section aria-labelledby="h-cyc">${headH}
+    <p class="prose">Letzte Periode begann am <b>${fmtDE(last)}</b>.${lens.length?` Dein letzter Zyklus dauerte <b>${lens[lens.length-1]}</b> Tage${lens.length>1?`, im Schnitt <b>${Math.round(lens.reduce((a,b)=>a+b,0)/lens.length)}</b>`:''}.`:''}</p>
+    <p class="hint">Anteil der eingetragenen Tage mit diesem Symptom, letzte 6 Monate</p>
+    <div class="cyc-wrap"><table class="cyc"><thead><tr><th scope="col"><span class="vh">Symptom</span></th>${order.map(g=>`<th scope="col">${lab[g]}<small>${G[g].length} ${G[g].length===1?'Tag':'Tage'}</small></th>`).join('')}</tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    ${few?'<p class="hint">Noch wenige Tage eingetragen. Je länger du die App nutzt, desto aussagekräftiger werden die Werte.</p>':''}
   </section>`;
 }
 function viewDaten(){
@@ -806,6 +879,7 @@ function exportCSV(){
   all.forEach(d=>{
     const c=S.days.get(d);
     if(c&&c.cried!=null)rows.push([fmtDE(d),'','Weinen',c.cried?'Geweint':'Nicht geweint','','']);
+    if(c&&c.flow)rows.push([fmtDE(d),'','Periode',FLOW_TXT[c.flow],'','']);
     if(c&&c.stress!=null)rows.push([fmtDE(d),'','Stress',c.stress+' von 4 ('+STRESS[c.stress]+')','','']);
     sorted.filter(e=>e.day===d).forEach(e=>rows.push([fmtDE(d),hhmm(e.ts),e.type==='food'?'Essen':'Symptom',
       e.type==='food'?(e.hasPhoto?'Mahlzeit (mit Foto)':'Mahlzeit'):symOf(e).name,e.sev?SEV[e.sev-1].l:'',e.note||'']));
@@ -824,6 +898,7 @@ main.addEventListener('click',ev=>{
   else if(a==='sym')logSymptom(b.dataset.id,b);
   else if(a==='cry')setDay('cried',b.dataset.v==='yes');
   else if(a==='stress')setDay('stress',+b.dataset.v);
+  else if(a==='flow')setDay('flow',b.dataset.v);
   else if(a==='edit')openEditor(b.dataset.id);
   else if(a==='nophoto')addMealNoPhoto();
   else if(a==='repeat')repeatMeal(b.dataset.id);
