@@ -24,7 +24,7 @@
   --bg:#F4F3F7; --surface:#FFFFFF; --sunk:#EAE8F0; --ink:#1C1923; --muted:#625D75; --line:#DCD9E5;
   --accent:#3D3796; --accent-soft:#E4E2F6; --on-accent:#FFFFFF;
   --sym1:#B07106; --sym2:#B23A57; --sym3:#6A55CC; --sym4:#1F7466; --sym5:#4F6C8C; --sym6:#9A4FA8;
-  --cry:#2F6FB5; --stress:#B4532A; --period:#C8303C; --danger:#B3261E;
+  --cry:#2F6FB5; --stress:#B4532A; --period:#C8303C; --measure:#5E7A1A; --danger:#B3261E;
   --toast-bg:#1C1923; --toast-fg:#F4F3F7; --toast-act:#C9C4FF;
   --shadow:0 1px 2px rgba(28,25,35,.08), 0 4px 14px rgba(28,25,35,.06);
   --f-display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
@@ -36,7 +36,7 @@
     --bg:#141219; --surface:#1E1B26; --sunk:#282432; --ink:#EDEAF4; --muted:#A49FB5; --line:#332E3F;
     --accent:#A8A1FF; --accent-soft:#2B2747; --on-accent:#16131F;
     --sym1:#E6A93A; --sym2:#EC7F98; --sym3:#A897FF; --sym4:#5FC2AF; --sym5:#93AFCF; --sym6:#D08DDC;
-    --cry:#78AEEB; --stress:#F0A070; --period:#FF8F8A; --danger:#F2867E;
+    --cry:#78AEEB; --stress:#F0A070; --period:#FF8F8A; --measure:#B6D36A; --danger:#F2867E;
     --toast-bg:#EDEAF4; --toast-fg:#141219; --toast-act:#3D3796;
     --shadow:0 1px 2px rgba(0,0,0,.4);
     color-scheme:dark;
@@ -46,7 +46,7 @@
   --bg:#141219; --surface:#1E1B26; --sunk:#282432; --ink:#EDEAF4; --muted:#A49FB5; --line:#332E3F;
   --accent:#A8A1FF; --accent-soft:#2B2747; --on-accent:#16131F;
   --sym1:#E6A93A; --sym2:#EC7F98; --sym3:#A897FF; --sym4:#5FC2AF; --sym5:#93AFCF; --sym6:#D08DDC;
-  --cry:#78AEEB; --stress:#F0A070; --period:#FF8F8A; --danger:#F2867E;
+  --cry:#78AEEB; --stress:#F0A070; --period:#FF8F8A; --measure:#B6D36A; --danger:#F2867E;
   --toast-bg:#EDEAF4; --toast-fg:#141219; --toast-act:#3D3796;
   --shadow:0 1px 2px rgba(0,0,0,.4);
   color-scheme:dark;
@@ -158,6 +158,10 @@ h3{margin:0}
 .thumb{width:46px;height:46px;border-radius:10px;object-fit:cover;background:var(--sunk);display:grid;place-items:center;color:var(--muted)}
 .marker{width:46px;height:46px;border-radius:10px;background:color-mix(in srgb,var(--c) 15%,transparent);display:grid;place-items:center}
 .marker::after{content:"";width:14px;height:14px;border-radius:50%;background:var(--c)}
+.marker.mk-mea::after{width:12px;height:12px;border-radius:3px;transform:rotate(45deg)}
+.dia{display:inline-block;flex:none;width:9px;height:9px;border-radius:2px;background:var(--measure);transform:rotate(45deg);margin:0 7px 1px 2px;vertical-align:middle}
+.sym.mea{grid-template-columns:18px minmax(0,1fr) auto}
+.sym.mea svg{color:var(--c)}
 .tl-text{min-width:0;display:flex;flex-direction:column}
 .tl-title{font-weight:700}
 .sev{color:var(--muted);font-weight:400}
@@ -288,11 +292,13 @@ const NEW_PAIN=DEFAULT_SYMPTOMS.filter(s=>s.id.startsWith('bauchschmerzen-'));
 const SEV=[{v:1,l:'Leicht'},{v:2,l:'Mittel'},{v:3,l:'Stark'}];
 const STRESS=['Kein','Leicht','Mittel','Stark','Extrem'];
 const STRESS_P=[14,35,55,78,100];
+const DEFAULT_MEASURES=[{id:'buscopan',name:'Buscopan'},{id:'lefax',name:'Lefax'},{id:'koernerkissen',name:'Körnerkissen'},{id:'tee',name:'Tee'}];
+const WHY={prev:'Vorbeugend',acute:'Gegen Beschwerden'};
 const FLOW_ORDER=['none','spot','light','heavy'];
 const FLOW={none:{l:'Keine',s:''},spot:{l:'Schmier\u00ADblutung',s:''},light:{l:'Leicht',s:'beginnt / endet'},heavy:{l:'Stark',s:'voll da'}};
 const FLOW_TXT={none:'Keine Periode',spot:'Schmierblutung',light:'Periode leicht',heavy:'Periode stark'};
 const FLOW_P={spot:30,light:62,heavy:100};
-const S={view:'tag',day:'',entries:[],days:new Map(),symptoms:[],persistent:false,storageOk:true,addingSym:false};
+const S={view:'tag',day:'',entries:[],days:new Map(),symptoms:[],measures:[],persistent:false,storageOk:true,addingSym:false,addingMea:false};
 const $=s=>document.querySelector(s);
 const main=$('#main'),panel=$('#panel'),sheet=$('#sheet');
 
@@ -307,6 +313,7 @@ const fmtLong=new Intl.DateTimeFormat('de-DE',{weekday:'long',day:'numeric',mont
 const fmtWd=new Intl.DateTimeFormat('de-DE',{weekday:'short'});
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const meaOf=e=>S.measures.find(m=>m.id===e.mea)||{name:e.name};
 const symOf=e=>S.symptoms.find(s=>s.id===e.sym)||{name:e.name,color:e.color||5};
 const inFrame=(()=>{try{return window.self!==window.top}catch(e){return true}})();
 const pk=e=>e.photoKey||e.id;
@@ -395,6 +402,26 @@ async function logSymptom(id,btn){
       {label:sym.noSev?'Uhrzeit ändern':'Stärke',fn:()=>openEditor(e.id)}]);
   }else openEditor(e.id,'Stell die Uhrzeit ein, zu der es an diesem Tag war.');
 }
+async function logMeasure(id){
+  const m=S.measures.find(x=>x.id===id);if(!m)return;
+  const e={id:uid(),type:'measure',day:S.day,ts:defaultTs(),mea:id,name:m.name,why:null,note:''};
+  await saveEntry(e);
+  const b=main.querySelector('.mea[data-id="'+id+'"]');
+  if(b){b.classList.remove('flash');void b.offsetWidth;b.classList.add('flash')}
+  if(S.day===todayKey()){
+    toast(m.name+' · '+hhmm(e.ts)+' eingetragen',[
+      {label:'Rückgängig',fn:()=>removeEntry(e.id,'Rückgängig gemacht')},
+      {label:'Vorbeugend',fn:()=>{e.why='prev';saveEntry(e);toast(m.name+' als vorbeugend markiert')}},
+      {label:'Details',fn:()=>openEditor(e.id)}]);
+  }else openEditor(e.id,'Stell die Uhrzeit ein, zu der es an diesem Tag war.');
+}
+const saveMeasures=()=>safe(store.put('meta',{k:'measures',list:S.measures}));
+async function addMeasure(name){
+  name=name.trim();if(!name)return;
+  if(S.measures.some(m=>m.name.toLowerCase()===name.toLowerCase())){toast('„'+name+'“ gibt es schon.');return}
+  S.measures.push({id:'m'+uid(),name,custom:true});
+  S.addingMea=false;render();await saveMeasures();
+}
 function loadImg(url){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('img'));i.src=url})}
 async function processImage(file){
   const url=URL.createObjectURL(file);
@@ -471,6 +498,7 @@ const I={
   pics:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg>',
   bowl:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M9 7c0-1.5 1-2 1-3.5M14 7c0-1.5 1-2 1-3.5"/></svg>',
   more:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><path d="M16.75 14v5.5M14 16.75h5.5"/></svg>',
+  plus:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><path d="M12 8v8M8 12h8"/></svg>',
   check:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   down:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
   up:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></svg>',
@@ -487,7 +515,7 @@ function dayTitle(k){
 function viewTag(){
   const isToday=S.day===todayKey();
   const list=S.entries.filter(e=>e.day===S.day).sort((a,b)=>a.ts-b.ts);
-  const counts={};list.forEach(e=>{if(e.type==='symptom')counts[e.sym]=(counts[e.sym]||0)+1});
+  const counts={},mc={};list.forEach(e=>{if(e.type==='symptom')counts[e.sym]=(counts[e.sym]||0)+1;if(e.type==='measure')mc[e.mea]=(mc[e.mea]||0)+1});
   const dd=S.days.get(S.day)||{};
   const cried=dd.cried==null?null:dd.cried;
   const stress=dd.stress==null?null:dd.stress;
@@ -495,6 +523,7 @@ function viewTag(){
   const cd=cycleDay(S.day);
   const [t,sub]=dayTitle(S.day);
   const visible=S.symptoms.filter(s=>!s.hidden);
+  const visM=S.measures.filter(m=>!m.hidden);
   return `
   <header class="dayhead">
     <div><h1>${esc(t)}</h1><p class="sub">${esc(sub)}${cd?' · Zyklustag '+cd:''}</p></div>
@@ -533,6 +562,20 @@ function viewTag(){
     </form>`:''}
   </section>
 
+  <section aria-labelledby="h-mea">
+    <div class="sec-head"><h2 class="label" id="h-mea">Maßnahmen</h2><span class="hint">Medikamente, Wärme, Tee …</span></div>
+    <div class="symgrid">
+      ${visM.map(m=>`<button class="sym mea" data-act="mea" data-id="${esc(m.id)}" style="--c:var(--measure)">${I.plus}<span>${esc(m.name)}</span>${mc[m.id]?`<span class="count" aria-label="${mc[m.id]} Mal">${mc[m.id]}×</span>`:'<span></span>'}</button>`).join('')}
+      ${S.addingMea?'':`<button class="sym sym-add${visM.length%2?' half':''}" data-act="addmea-open">+ Eigene Maßnahme</button>`}
+    </div>
+    ${S.addingMea?`<form class="addsym" id="addmea-form">
+      <label for="addmea-name" class="vh">Name der Maßnahme</label>
+      <input id="addmea-name" placeholder="z. B. Iberogast" maxlength="40" autocomplete="off" enterkeyhint="done">
+      <button type="submit" class="btn-accent">Hinzufügen</button>
+      <button type="button" class="btn-ghost" data-act="addmea-close">Abbrechen</button>
+    </form>`:''}
+  </section>
+
   <section aria-labelledby="h-cry">
     <h2 class="label" id="h-cry">${isToday?'Heute geweint?':'An diesem Tag geweint?'}</h2>
     <div class="seg" role="group" aria-labelledby="h-cry">
@@ -558,7 +601,7 @@ function viewTag(){
   <section aria-labelledby="h-tl">
     <h2 class="label" id="h-tl">Tagesverlauf</h2>
     ${list.length?`<ol class="tl">${list.map(itemHTML).join('')}</ol>`:
-      `<p class="empty">Noch nichts eingetragen. Ein Foto vom Essen oder ein Tipp auf ein Symptom reicht.</p>`}
+      `<p class="empty">Noch nichts eingetragen. Ein Foto vom Essen oder ein Tipp auf ein Symptom oder eine Maßnahme reicht.</p>`}
   </section>`;
 }
 function rcard(e,meta,done){
@@ -588,6 +631,9 @@ function itemHTML(e){
   if(e.type==='food'){
     vis=e.thumb?`<img class="thumb" src="${e.thumb}" alt="">`:`<span class="thumb">${I.bowl}</span>`;
     title='Essen';
+  }else if(e.type==='measure'){
+    vis='<span class="marker mk-mea" style="--c:var(--measure)"></span>';
+    title=esc(meaOf(e).name)+(e.why?` <span class="sev">· ${WHY[e.why]}</span>`:'');
   }else{
     const s=symOf(e);vis=`<span class="marker" style="--c:var(--sym${s.color})"></span>`;
     title=esc(s.name)+(e.sev?` <span class="sev">· ${SEV[e.sev-1].l}</span>`:'');
@@ -607,6 +653,10 @@ function viewVerlauf(){
   const rows=S.symptoms.filter(s=>symIds.has(s.id));
   // symptoms whose type was removed but still appear
   S.entries.forEach(e=>{if(e.type==='symptom'&&inWin.has(e.day)&&!rows.some(r=>r.id===e.sym))rows.push({id:e.sym,name:e.name,color:e.color||5})});
+  const meaIds=new Set(S.measures.filter(m=>!m.hidden).map(m=>m.id));
+  S.entries.forEach(e=>{if(e.type==='measure'&&inWin.has(e.day))meaIds.add(e.mea)});
+  const mrows=S.measures.filter(m=>meaIds.has(m.id));
+  S.entries.forEach(e=>{if(e.type==='measure'&&inWin.has(e.day)&&!mrows.some(r=>r.id===e.mea))mrows.push({id:e.mea,name:e.name})});
   const cnt=(d,f)=>(by[d]||[]).filter(f).length;
   const cell=(n,color)=>{
     if(!n)return '<span class="cell zero"></span>';
@@ -620,6 +670,7 @@ function viewVerlauf(){
   const stressAvg=stressVals.length?(stressVals.reduce((a,b)=>a+b,0)/stressVals.length).toFixed(1).replace('.',','):null;
   const head=days.map(d=>{const dt=parseDay(d);return `<th scope="col" class="${d===end?'is-today':''}">${esc(fmtWd.format(dt).replace('.',''))}<span class="dn">${dt.getDate()}</span></th>`}).join('');
   const body=rows.map(s=>`<tr><th scope="row">${esc(s.name)}</th>${days.map(d=>{const n=cnt(d,e=>e.type==='symptom'&&e.sym===s.id);return `<td title="${esc(s.name)}, ${fmtDE(d)}: ${n}×">${cell(n,'--sym'+s.color)}</td>`}).join('')}</tr>`).join('')
+    +mrows.map(m=>`<tr><th scope="row"><span class="dia"></span>${esc(m.name)}</th>${days.map(d=>{const n=cnt(d,e=>e.type==='measure'&&e.mea===m.id);return `<td title="${esc(m.name)}, ${fmtDE(d)}: ${n}×">${cell(n,'--measure')}</td>`}).join('')}</tr>`).join('')
     +`<tr><th scope="row">Geweint</th>${days.map(d=>{const c=S.days.get(d);
         if(!c||c.cried==null)return '<td><span class="cell zero"></span></td>';
         return c.cried?'<td title="Geweint"><span class="cell" style="--c:var(--cry);--p:100%"></span></td>':'<td title="Nicht geweint"><span class="cell no"></span></td>'}).join('')}</tr>`
@@ -636,6 +687,8 @@ function viewVerlauf(){
     const es=(by[d]||[]).slice().sort((a,b)=>a.ts-b.ts);
     const c={};es.forEach(e=>{if(e.type==='symptom')c[e.sym]=(c[e.sym]||0)+1});
     const chips=Object.keys(c).map(id=>{const s=symOf(es.find(e=>e.sym===id));return `<span class="chip"><span class="dot" style="--c:var(--sym${s.color})"></span>${esc(s.name)}${c[id]>1?' '+c[id]+'×':''}</span>`});
+    const mcn={};es.forEach(e=>{if(e.type==='measure')mcn[e.mea]=(mcn[e.mea]||0)+1});
+    Object.keys(mcn).forEach(id=>chips.push(`<span class="chip"><span class="dia"></span>${esc(meaOf(es.find(e=>e.mea===id)).name)}${mcn[id]>1?' '+mcn[id]+'×':''}</span>`));
     const cr=S.days.get(d)||{};
     if(cr.cried===true)chips.push('<span class="chip"><span class="dot" style="--c:var(--cry)"></span>Geweint</span>');
     if(cr.flow&&cr.flow!=='none')chips.push(`<span class="chip"><span class="dot" style="--c:var(--period)"></span>${FLOW_TXT[cr.flow]}</span>`);
@@ -657,7 +710,7 @@ function viewVerlauf(){
     <p class="summary">An <b>${symDays}</b> von 14 Tagen hattest du Symptome, an <b>${cryDays}</b> Tagen hast du geweint. <b>${meals}</b> Mahlzeiten sind eingetragen.${stressAvg?` Dein Stress lag im Schnitt bei <b>${stressAvg}</b> von 4.`:''}</p>
   </section>
   <section aria-labelledby="h-mx">
-    <h2 class="label" id="h-mx">Symptome pro Tag</h2>
+    <h2 class="label" id="h-mx">Pro Tag</h2>
     <div class="matrix-wrap"><table class="matrix"><thead><tr><th scope="col"><span class="vh">Eintrag</span></th>${head}</tr></thead><tbody>${body}</tbody></table></div>
     <div class="legend"><span><span class="cell" style="--c:var(--sym3);--p:65%"></span>einmal</span><span><span class="cell" style="--c:var(--sym3);--p:100%"></span>öfter (Zahl = Anzahl)</span><span><span class="cell no"></span>nicht geweint</span></div>
   </section>
@@ -717,6 +770,10 @@ function viewDaten(){
     <h2 class="label" id="h-sym2">Symptom-Knöpfe</h2>
     <div class="stack">${S.symptoms.map(s=>`<div class="symrow ${s.hidden?'off':''}"><span class="dot" style="--c:var(--sym${s.color})"></span><span class="n">${esc(s.name)}</span><button data-act="symtoggle" data-id="${esc(s.id)}">${s.hidden?'Einblenden':'Ausblenden'}</button></div>`).join('')}</div>
   </section>
+  <section aria-labelledby="h-mea2">
+    <h2 class="label" id="h-mea2">Maßnahmen-Knöpfe</h2>
+    <div class="stack">${S.measures.map(m=>`<div class="symrow ${m.hidden?'off':''}"><span class="dia"></span><span class="n">${esc(m.name)}</span><button data-act="meatoggle" data-id="${esc(m.id)}">${m.hidden?'Einblenden':'Ausblenden'}</button></div>`).join('')}</div>
+  </section>
   <section aria-labelledby="h-stat">
     <h2 class="label" id="h-stat">Speicher</h2>
     <dl class="facts">
@@ -739,6 +796,7 @@ function render(){
   main.innerHTML=html;
   document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-current',t.dataset.tab===S.view?'page':'false'));
   if(S.addingSym&&S.view==='tag'){const i=$('#addsym-name');if(i)i.focus();return}
+  if(S.addingMea&&S.view==='tag'){const i=$('#addmea-name');if(i)i.focus();return}
   if(k){const el=[...main.querySelectorAll('button,input,textarea')].find(x=>focusKey(x)===k);if(el)el.focus({preventScroll:true})}
   if(S.view==='daten')showUsage();
 }
@@ -779,15 +837,18 @@ function openEditor(id,hint){
 function renderEditor(){
   const e=S.entries.find(x=>x.id===ed.id);if(!e){closeEditor();return}
   const s=e.type==='symptom'?symOf(e):null;
+  const m=e.type==='measure'?meaOf(e):null;
   panel.innerHTML=`
-    <div><h2 id="ed-title">${s?`<span class="dot" style="--c:var(--sym${s.color})"></span>${esc(s.name)}`:'Essen'}</h2><p class="sub">${esc(fmtLong.format(parseDay(e.day)))}</p></div>
+    <div><h2 id="ed-title">${s?`<span class="dot" style="--c:var(--sym${s.color})"></span>${esc(s.name)}`:m?`<span class="dia"></span>${esc(m.name)}`:'Essen'}</h2><p class="sub">${esc(fmtLong.format(parseDay(e.day)))}</p></div>
     ${ed.hint?`<p class="note-box">${esc(ed.hint)}</p>`:''}
     ${e.hasPhoto?`<img class="sheet-photo" id="ed-photo" alt="Foto vom Essen" src="${ed.photoURL||e.thumb}">`:''}
     <div class="field"><label for="ed-time">Uhrzeit</label><input type="time" id="ed-time" value="${hhmm(e.ts)}"></div>
     ${s&&!s.noSev?`<div class="field"><span class="flabel" id="ed-sev-l">Stärke <span class="opt">optional</span></span>
       <div class="seg seg3" role="group" aria-labelledby="ed-sev-l">${SEV.map(v=>`<button type="button" data-ed="sev" data-v="${v.v}" aria-pressed="${e.sev===v.v}">${v.l}</button>`).join('')}</div></div>`:''}
+    ${m?`<div class="field"><span class="flabel" id="ed-why-l">Anlass <span class="opt">optional</span></span>
+      <div class="seg" role="group" aria-labelledby="ed-why-l">${Object.keys(WHY).map(k=>`<button type="button" data-ed="why" data-v="${k}" aria-pressed="${e.why===k}">${WHY[k]}</button>`).join('')}</div></div>`:''}
     <div class="field"><label for="ed-note">${e.type==='food'?'Name':'Notiz'} <span class="opt">optional</span></label>
-      <textarea id="ed-note" rows="2" placeholder="${e.type==='food'?'z. B. Haferflocken mit Banane':'z. B. nach dem Kaffee'}">${esc(e.note)}</textarea></div>
+      <textarea id="ed-note" rows="2" placeholder="${e.type==='food'?'z. B. Haferflocken mit Banane':e.type==='measure'?'z. B. 1 Tablette':'z. B. nach dem Kaffee'}">${esc(e.note)}</textarea></div>
     ${ed.confirm?`<div class="confirm" role="alert"><span>Diesen Eintrag löschen?</span><button type="button" class="btn-ghost" data-ed="del-no">Behalten</button><button type="button" class="btn-danger" data-ed="del-yes">Löschen</button></div>`
       :`<div class="panel-foot"><button type="button" class="btn-ghost danger-text" data-ed="del">Löschen</button><button type="button" class="btn-accent" data-ed="done">Fertig</button></div>`}`;
 }
@@ -812,6 +873,8 @@ panel.addEventListener('click',async ev=>{
   const a=b.dataset.ed;
   if(a==='sev'){const v=+b.dataset.v;e.sev=e.sev===v?null:v;
     panel.querySelectorAll('[data-ed="sev"]').forEach(x=>x.setAttribute('aria-pressed',String(+x.dataset.v===e.sev)));saveEntry(e)}
+  else if(a==='why'){const v=b.dataset.v;e.why=e.why===v?null:v;
+    panel.querySelectorAll('[data-ed="why"]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.v===e.why)));saveEntry(e)}
   else if(a==='done')closeEditor();
   else if(a==='del'){flushNote();ed.confirm=true;renderEditor();const n=panel.querySelector('[data-ed="del-no"]');if(n)n.focus()}
   else if(a==='del-no'){ed.confirm=false;renderEditor();const d=panel.querySelector('[data-ed="del"]');if(d)d.focus()}
@@ -851,7 +914,7 @@ async function exportBackup(){
   for(const e of S.entries){const x=Object.assign({},e);
     if(e.hasPhoto&&!seenPhotos.has(pk(e))){try{const b=await store.get('photos',pk(e));if(b){x.photo=await blobToDataURL(b);seenPhotos.add(pk(e))}}catch(err){}}
     entries.push(x)}
-  const data={app:'bauchbuch',version:1,exportedAt:new Date().toISOString(),symptoms:S.symptoms,days:[...S.days.values()],entries};
+  const data={app:'bauchbuch',version:1,exportedAt:new Date().toISOString(),symptoms:S.symptoms,measures:S.measures,days:[...S.days.values()],entries};
   await deliver(new Blob([JSON.stringify(data)],{type:'application/json'}),'bauchbuch-backup-'+todayKey()+'.json');
 }
 async function importBackup(file){
@@ -868,21 +931,25 @@ async function importBackup(file){
     }
     for(const d of data.days||[]){await store.put('days',d);S.days.set(d.day,d)}
     for(const s of data.symptoms||[]){if(!S.symptoms.some(y=>y.id===s.id))S.symptoms.push(s)}
+    for(const m of data.measures||[]){if(!S.measures.some(y=>y.id===m.id))S.measures.push(m)}
+    await store.put('meta',{k:'measures',list:S.measures});
     await store.put('meta',{k:'symptoms',list:S.symptoms});
   }catch(e){toast('Beim Einspielen ist etwas schiefgelaufen. '+n+' Einträge wurden übernommen.');render();return}
   render();toast(n+' Einträge übernommen.');
 }
 function exportCSV(){
-  const rows=[['Datum','Uhrzeit','Art','Eintrag','Stärke','Notiz']];
+  const rows=[['Datum','Uhrzeit','Art','Eintrag','Stärke','Anlass','Notiz']];
   const sorted=S.entries.slice().sort((a,b)=>a.ts-b.ts);
   const all=[...new Set([...sorted.map(e=>e.day),...S.days.keys()])].sort();
   all.forEach(d=>{
     const c=S.days.get(d);
-    if(c&&c.cried!=null)rows.push([fmtDE(d),'','Weinen',c.cried?'Geweint':'Nicht geweint','','']);
-    if(c&&c.flow)rows.push([fmtDE(d),'','Periode',FLOW_TXT[c.flow],'','']);
-    if(c&&c.stress!=null)rows.push([fmtDE(d),'','Stress',c.stress+' von 4 ('+STRESS[c.stress]+')','','']);
-    sorted.filter(e=>e.day===d).forEach(e=>rows.push([fmtDE(d),hhmm(e.ts),e.type==='food'?'Essen':'Symptom',
-      e.type==='food'?(e.hasPhoto?'Mahlzeit (mit Foto)':'Mahlzeit'):symOf(e).name,e.sev?SEV[e.sev-1].l:'',e.note||'']));
+    if(c&&c.cried!=null)rows.push([fmtDE(d),'','Weinen',c.cried?'Geweint':'Nicht geweint','','','']);
+    if(c&&c.flow)rows.push([fmtDE(d),'','Periode',FLOW_TXT[c.flow],'','','']);
+    if(c&&c.stress!=null)rows.push([fmtDE(d),'','Stress',c.stress+' von 4 ('+STRESS[c.stress]+')','','','']);
+    sorted.filter(e=>e.day===d).forEach(e=>rows.push([fmtDE(d),hhmm(e.ts),
+      e.type==='food'?'Essen':e.type==='measure'?'Maßnahme':'Symptom',
+      e.type==='food'?(e.hasPhoto?'Mahlzeit (mit Foto)':'Mahlzeit'):e.type==='measure'?meaOf(e).name:symOf(e).name,
+      e.sev?SEV[e.sev-1].l:'',e.why?WHY[e.why]:'',e.note||'']));
   });
   const csv=rows.map(r=>r.map(v=>{v=String(v);return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(';')).join('\r\n');
   deliver(new Blob(['﻿'+csv],{type:'text/csv'}),'bauchbuch-uebersicht-'+todayKey()+'.csv');
@@ -896,6 +963,7 @@ main.addEventListener('click',ev=>{
   else if(a==='next'){if(S.day<todayKey()){S.day=addDays(S.day,1);render()}}
   else if(a==='today'){S.day=todayKey();render()}
   else if(a==='sym')logSymptom(b.dataset.id,b);
+  else if(a==='mea')logMeasure(b.dataset.id);
   else if(a==='cry')setDay('cried',b.dataset.v==='yes');
   else if(a==='stress')setDay('stress',+b.dataset.v);
   else if(a==='flow')setDay('flow',b.dataset.v);
@@ -903,11 +971,14 @@ main.addEventListener('click',ev=>{
   else if(a==='nophoto')addMealNoPhoto();
   else if(a==='repeat')repeatMeal(b.dataset.id);
   else if(a==='picker')openPicker();
-  else if(a==='addsym-open'){S.addingSym=true;render()}
+  else if(a==='addsym-open'){S.addingSym=true;S.addingMea=false;render()}
   else if(a==='addsym-close'){S.addingSym=false;render()}
+  else if(a==='addmea-open'){S.addingMea=true;S.addingSym=false;render()}
+  else if(a==='addmea-close'){S.addingMea=false;render()}
   else if(a==='goto'){S.day=b.dataset.day;S.view='tag';render();window.scrollTo(0,0)}
   else if(a==='backup')exportBackup();
   else if(a==='csv')exportCSV();
+  else if(a==='meatoggle'){const m=S.measures.find(x=>x.id===b.dataset.id);if(m){m.hidden=!m.hidden;render();saveMeasures()}}
   else if(a==='symtoggle'){const s=S.symptoms.find(x=>x.id===b.dataset.id);if(s){s.hidden=!s.hidden;render();saveSymptoms()}}
 });
 main.addEventListener('change',ev=>{
@@ -916,11 +987,11 @@ main.addEventListener('change',ev=>{
   if(t.dataset.restore){const f=t.files&&t.files[0];if(f)importBackup(f).finally(()=>{t.value=''})}
 });
 main.addEventListener('submit',ev=>{
-  if(ev.target.id!=='addsym-form')return;ev.preventDefault();
-  addSymptom($('#addsym-name').value);
+  if(ev.target.id==='addsym-form'){ev.preventDefault();addSymptom($('#addsym-name').value)}
+  else if(ev.target.id==='addmea-form'){ev.preventDefault();addMeasure($('#addmea-name').value)}
 });
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
-  S.view=t.dataset.tab;S.addingSym=false;render();window.scrollTo(0,0);
+  S.view=t.dataset.tab;S.addingSym=false;S.addingMea=false;render();window.scrollTo(0,0);
 }));
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState!=='visible')return;
@@ -937,6 +1008,8 @@ async function init(){
   try{(await store.all('days')).forEach(d=>S.days.set(d.day,d))}catch(e){}
   let sm=null;try{sm=await store.get('meta','symptoms')}catch(e){}
   S.symptoms=sm&&Array.isArray(sm.list)?sm.list:DEFAULT_SYMPTOMS.map(s=>Object.assign({},s));
+  let mm=null;try{mm=await store.get('meta','measures')}catch(e){}
+  S.measures=mm&&Array.isArray(mm.list)?mm.list:DEFAULT_MEASURES.map(m=>Object.assign({},m));
   // Update from the single pain button to "leicht" and "stark"; old entries keep their name
   const oldPain=S.symptoms.findIndex(s=>s.id==='bauchschmerzen');
   if(oldPain>=0&&!S.symptoms.some(s=>s.id==='bauchschmerzen-leicht')){
